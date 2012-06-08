@@ -5,4 +5,36 @@
 ; - Inspired by Daniel Boswell's labyrnth.bas for QBasic
 ; - Implemented for DCPU-16 v1.7 specifications
 
-SUB PC, 1
+SET PC, main
+
+; Interupt address for LEM1802 display
+:display_hwi DAT 0
+
+:main
+	JSR detect_devices
+	JSR init_display
+	SET PC, end
+
+:detect_devices
+	SET I, 0
+	HWN J
+:next_device
+	HWQ I
+	; Check for the LEM1802 display (0x7349F615)
+	IFE A, 0xF615
+	IFE B, 0x7349
+		SET [display_hwi], I
+	; Keep 'em comin'
+	ADD I, 1
+	IFN I, J
+		SET PC, next_device
+	SET PC, POP
+
+:init_display
+	SET A, 0
+	SET B, 0x8000
+	HWI [display_hwi]
+	SET PC, POP
+
+:end
+	SUB PC, 1
