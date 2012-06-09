@@ -7,14 +7,9 @@
 
 SET PC, main
 
-; Interupt address for LEM1802 display
-:display_hwi DAT 0
-
-; World size (WIDTH, HEIGHT)
-:world_size DAT 8, 8
-
-; Player position (X, Y)
-:player_position DAT 1, 1
+:display_hwi DAT 0 ; LEM1802 interupt address
+:world_size DAT 8, 8 ; WIDTH, HEIGHT
+:player_position DAT 1, 1 ; X, Y
 
 ; 0x00 - Empty
 ; 0x01 - Wall
@@ -31,7 +26,7 @@ SET PC, main
 :main
 	JSR detect_devices
 	JSR init_display
-	SET PC, end
+	SUB PC, 1
 
 :detect_devices
 	SET I, 0
@@ -53,6 +48,3 @@ SET PC, main
 	SET B, 0x8000
 	HWI [display_hwi]
 	SET PC, POP
-
-:end
-	SUB PC, 1
