@@ -13,7 +13,7 @@ SET PC, main
 
 ; 0x00 - Empty
 ; 0x01 - Wall
-:world_data
+:world_map
 	DAT 0x0101010101010101
 	DAT 0x0100000100000001
 	DAT 0x0101000100000001
