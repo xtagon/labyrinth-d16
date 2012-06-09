@@ -23,9 +23,14 @@ SET PC, main
 	DAT 0x0100, 0x0000, 0x0000, 0x0001
 	DAT 0x0101, 0x0101, 0x0101, 0x0101
 
+:font
+	DAT 0x0000, 0x0000 ; Clear (obviously)
+	DAT 0x7F7F, 0x7F7F, 0x7F7F, 0x7F00 ; Wall Block
+
 :main
 	JSR detect_devices
 	JSR init_display
+	JSR render_radar
 	SUB PC, 1
 
 :detect_devices
@@ -44,7 +49,23 @@ SET PC, main
 	SET PC, POP
 
 :init_display
+	JSR init_display_screen
+	JSR init_display_font
+	SET PC, POP
+
+:init_display_screen
 	SET A, 0
 	SET B, 0x8000
 	HWI [display_hwi]
+	SET PC, POP
+
+:init_display_font
+	SET A, 1
+	SET B, font
+	HWI [display_hwi]
+	SET PC, POP
+
+:render_radar
+	SET [0x8000], 0x7001
+	SET [0x8001], 0x7002
 	SET PC, POP
