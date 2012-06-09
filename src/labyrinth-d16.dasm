@@ -24,7 +24,7 @@ SET PC, main
 	DAT 0x0101, 0x0101, 0x0101, 0x0101
 
 :font
-	DAT 0x0000, 0x0000 ; Clear (obviously)
+	DAT 0x0000, 0x0000, 0x0000, 0x0000 ; Empty Block
 	DAT 0x7F7F, 0x7F7F, 0x7F7F, 0x7F00 ; Wall Block
 
 :main
@@ -66,6 +66,66 @@ SET PC, main
 	SET PC, POP
 
 :render_radar
-	SET [0x8000], 0x7001
-	SET [0x8001], 0x7002
+	SET I, 0
+:render_radar_next
+	JSR render_radar_row
+	ADD I, 1
+	IFG 3, I
+		SET PC, render_radar_next
+	SET PC, POP
+
+:render_radar_row
+	SET J, 0
+:render_radar_row_next
+	JSR render_radar_block
+	ADD J, 1
+	IFG 3, J
+		SET PC, render_radar_row_next
+	SET PC, POP
+
+:render_radar_block
+	; Set X, Y to player position (on the map)
+	SET X, [player_position]
+	SET Y, [player_position + 1]
+	; Translate X, Y to the block we want to draw
+	SUB X, 1
+	SUB Y, 1
+	ADD X, J
+	ADD Y, I
+	; Get the block memory location on the map
+	; X / 2 + Y * (WORLD_WIDTH / 2)
+	SET Z, world_map
+	SET A, X
+	DIV A, 2
+	ADD Z, A
+	SET A, [world_size]
+	DIV A, 2
+	MUL A, Y
+	ADD Z, A
+	; Parse it into the octet that we want
+	SET Z, [Z]
+	SET A, X
+	MOD A, 2
+	IFE A, 1
+		AND Z, 0x00FF
+	AND Z, 0xFF00
+	SHR Z, 8
+	; Set A to the video address at which to start drawing
+	; Remember, we're drawing two characters per block (8x8)
+	SET A, 0x8000
+	SET B, 2
+	MUL B, J
+	ADD A, B
+	SET B, 32
+	MUL B, I
+	ADD A, B
+	; Draw the left side of the block
+	SET B, Z
+	MUL B, 2
+	BOR B, 0x7000
+	SET [A], B
+	; Draw the right side of the block
+	ADD B, 1
+	SET [A + 1], B
+	; Phew, glad that's over with!
 	SET PC, POP
