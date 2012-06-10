@@ -77,26 +77,31 @@ SET PC, main
 :render_map_row
 	SET J, 0
 :render_map_row_next
-	JSR render_map_cell
+	JSR render_map_block
 	ADD J, 1
 	IFG [map_size + 1], J
 		SET PC, render_map_row_next
 	SET PC, POP
 
-:render_map_cell
+:render_map_block
 	; Set A to the block type that we wish to draw
 	SET A, [map_size]
 	MUL A, I
 	ADD A, J
 	ADD A, map_data
 	SET A, [A]
-	; Set Z to the video RAM address we wish to set
-	SET Z, 32
-	MUL Z, I
-	ADD Z, J
-	ADD Z, [display_buffer]
-	; Draw the block
+	; Set B to the video RAM address we wish to set
+	; Remember, we're drawing two cells per block
+	SET B, 32
+	MUL B, I
+	SET C, J
+	MUL C, 2
+	ADD B, C
+	ADD B, [display_buffer]
+	; Draw the left side of the block
 	BOR A, 0x7000
-	SET [Z], A
+	SET [B], A
+	; Draw the right side of the block
+	SET [B + 1], A
 	; We're done here
 	SET PC, POP
