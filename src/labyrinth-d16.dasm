@@ -24,8 +24,8 @@ SET PC, main
 	DAT 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001 ; WWWWWWWW
 
 :font
-	DAT 0x0000, 0x0000 ; Empty
-	DAT 0xFFFF, 0xFFFF ; Wall
+	DAT 0x0000, 0x0000, 0x0000, 0x0000 ; Empty
+	DAT 0x7F7F, 0x7F7F, 0x7F7F, 0x7F00 ; Wall
 
 :main
 	JSR detect_devices
@@ -90,8 +90,9 @@ SET PC, main
 	ADD A, J
 	ADD A, map_data
 	SET A, [A]
+	; Set A to the font location for this block
+	MUL A, 2
 	; Set B to the video RAM address we wish to set
-	; Remember, we're drawing two cells per block
 	SET B, 32
 	MUL B, I
 	SET C, J
@@ -102,6 +103,7 @@ SET PC, main
 	BOR A, 0x7000
 	SET [B], A
 	; Draw the right side of the block
+	ADD A, 1
 	SET [B + 1], A
 	; We're done here
 	SET PC, POP
