@@ -109,7 +109,8 @@ SET PC, main
 	IFE A, 1
 		AND Z, 0x00FF
 	AND Z, 0xFF00
-	SHR Z, 8
+	IFE A, 0
+		SHR Z, 8
 	; Set A to the video address at which to start drawing
 	; Remember, we're drawing two characters per block (8x8)
 	SET A, 0x8000
