@@ -8,29 +8,24 @@
 SET PC, main
 
 :display_hwi DAT 0 ; LEM1802 interupt address
-:world_size DAT 8, 8 ; WIDTH, HEIGHT
-:player_position DAT 1, 1 ; X, Y
+:display_buffer DAT 0x8000 ; Starting location for video RAM
+:map_size DAT 3, 3 ; WIDTH, HEIGHT
 
-; 0x00 - Empty Block
-; 0x01 - Wall Block
-:world_map
-	DAT 0x0101, 0x0101, 0x0101, 0x0101
-	DAT 0x0100, 0x0001, 0x0000, 0x0001
-	DAT 0x0101, 0x0001, 0x0000, 0x0001
-	DAT 0x0100, 0x0001, 0x0000, 0x0001
-	DAT 0x0100, 0x0101, 0x0000, 0x0001
-	DAT 0x0100, 0x0000, 0x0000, 0x0001
-	DAT 0x0100, 0x0000, 0x0000, 0x0001
-	DAT 0x0101, 0x0101, 0x0101, 0x0101
+; 0x0000 - Empty
+; 0x0001 - Wall
+:map_data
+	DAT 0x0001, 0x0001, 0x0001 ; WWW
+	DAT 0x0001, 0x0000, 0x0000 ; W..
+	DAT 0x0001, 0x0001, 0x0000 ; WW.
 
 :font
-	DAT 0x0000, 0x0000, 0x0000, 0x0000 ; Empty Block
-	DAT 0x7F7F, 0x7F7F, 0x7F7F, 0x7F00 ; Wall Block
+	DAT 0x0000, 0x0000 ; Empty
+	DAT 0xFFFF, 0xFFFF ; Wall
 
 :main
 	JSR detect_devices
 	JSR init_display
-	JSR render_radar
+	JSR render_map
 	SUB PC, 1
 
 :detect_devices
@@ -55,7 +50,7 @@ SET PC, main
 
 :init_display_screen
 	SET A, 0
-	SET B, 0x8000
+	SET B, [display_buffer]
 	HWI [display_hwi]
 	SET PC, POP
 
@@ -65,68 +60,38 @@ SET PC, main
 	HWI [display_hwi]
 	SET PC, POP
 
-:render_radar
+:render_map
 	SET I, 0
-:render_radar_next
-	JSR render_radar_row
+:render_map_next
+	JSR render_map_row
 	ADD I, 1
-	IFG 3, I
-		SET PC, render_radar_next
+	IFG [map_size], I
+		SET PC, render_map_next
 	SET PC, POP
 
-:render_radar_row
+:render_map_row
 	SET J, 0
-:render_radar_row_next
-	JSR render_radar_block
+:render_map_row_next
+	JSR render_map_cell
 	ADD J, 1
-	IFG 3, J
-		SET PC, render_radar_row_next
+	IFG [map_size + 1], J
+		SET PC, render_map_row_next
 	SET PC, POP
 
-:render_radar_block
-	; Set X, Y to player position (on the map)
-	SET X, [player_position]
-	SET Y, [player_position + 1]
-	; Translate X, Y to the block we want to draw
-	SUB X, 1
-	SUB Y, 1
-	ADD X, J
-	ADD Y, I
-	; Get the block memory location on the map
-	; X / 2 + Y * (WORLD_WIDTH / 2)
-	SET Z, world_map
-	SET A, X
-	DIV A, 2
-	ADD Z, A
-	SET A, [world_size]
-	DIV A, 2
-	MUL A, Y
-	ADD Z, A
-	; Parse it into the octet that we want
-	SET Z, [Z]
-	SET A, X
-	MOD A, 2
-	IFE A, 1
-		AND Z, 0x00FF
-	AND Z, 0xFF00
-	IFE A, 0
-		SHR Z, 8
-	; Set A to the video address at which to start drawing
-	; Remember, we're drawing two characters per block (8x8)
-	SET A, 0x8000
-	SET B, 2
-	MUL B, J
-	ADD A, B
-	SET B, 32
-	MUL B, I
-	ADD A, B
-	; Draw the left side of the block
-	SET B, Z
-	MUL B, 2
-	BOR B, 0x7000
-	SET [A], B
-	; Draw the right side of the block
-	ADD B, 1
-	SET [A + 1], B
-	; Phew, glad that's over with!
+:render_map_cell
+	; Set A to the block type that we wish to draw
+	SET A, 3
+	MUL A, I
+	ADD A, J
+	ADD A, map_data
+	SET A, [A]
+	; Set Z to the video RAM address we wish to set
+	SET Z, 32
+	MUL Z, I
+	ADD Z, J
+	ADD Z, [display_buffer]
+	; Draw the block
+	BOR A, 0x7000
+	SET [Z], A
+	; We're done here
 	SET PC, POP
