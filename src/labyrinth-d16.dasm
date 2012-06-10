@@ -9,6 +9,7 @@ SET PC, main
 
 :display_hwi DAT 0 ; LEM1802 interupt address
 :display_buffer DAT 0x8000 ; Starting location for video RAM
+:keyboard_hwi DAT 0 ; Generic Keyboard interupt address
 
 ; 0x00 - Empty
 ; 0x01 - Wall
@@ -29,7 +30,7 @@ SET PC, main
 
 :main
 	JSR detect_devices
-	JSR init_display
+	JSR init_devices
 	JSR render_map
 	SUB PC, 1
 
@@ -42,10 +43,19 @@ SET PC, main
 	IFE A, 0xF615
 	IFE B, 0x7349
 		SET [display_hwi], I
+	; Check for Generic Keyboard (0x30CF7406)
+	IFE A, 0x7406
+	IFE B, 0x30CF
+		SET [keyboard_hwi], I
 	; Keep 'em comin'
 	ADD I, 1
 	IFN I, J
 		SET PC, next_device
+	SET PC, POP
+
+:init_devices
+	JSR init_display
+	JSR init_keyboard
 	SET PC, POP
 
 :init_display
@@ -63,6 +73,11 @@ SET PC, main
 	SET A, 1
 	SET B, font
 	HWI [display_hwi]
+	SET PC, POP
+
+:init_keyboard
+	SET A, 0
+	HWI [keyboard_hwi]
 	SET PC, POP
 
 :render_map
