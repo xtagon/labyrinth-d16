@@ -85,7 +85,7 @@ SET PC, main
 :render_map_next
 	JSR render_map_row
 	ADD I, 1
-	IFG [map_size], I
+	IFG [map_size + 1], I
 		SET PC, render_map_next
 	SET PC, POP
 
@@ -94,7 +94,7 @@ SET PC, main
 :render_map_row_next
 	JSR render_map_block
 	ADD J, 1
-	IFG [map_size + 1], J
+	IFG [map_size], J
 		SET PC, render_map_row_next
 	SET PC, POP
 
