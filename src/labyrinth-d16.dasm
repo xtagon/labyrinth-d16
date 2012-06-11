@@ -12,10 +12,10 @@ SET PC, main
 :keyboard_hwi DAT 0 ; Generic Keyboard interupt address
 
 ; 0x00 - Empty
-; 0x11 - Wall
+; 0x11 - Stone
 ; 0x42 - Water
 ; 0x63 - Planks
-; 0x64 - Planks on Water
+; 0x64 - Bridge
 ; 0x25 - Red Key
 ; 0x35 - Green Key
 ; 0x45 - Blue Key
@@ -44,12 +44,18 @@ SET PC, main
 	DAT 0x1163, 0x0026, 0x0042, 0x0000, 0x0000, 0xFF11
 	DAT 0x1111, 0x1111, 0x1111, 0x1111, 0x1111, 0x1111
 
-:font
+:display_font
 	DAT 0x0000, 0x0000, 0x0000, 0x0000 ; Empty
-	DAT 0x7F7F, 0x7F7F, 0x7F7F, 0x7F00 ; Wall
+	DAT 0x3E7F, 0x7F7F, 0x7F7F, 0x3E00 ; Stone
 	DAT 0x552A, 0x552A, 0x552A, 0x5500 ; Water
 	DAT 0x4C6C, 0x6636, 0x331B, 0x1900 ; Planks
-	DAT 0x7777, 0x7777, 0x7777, 0x7700 ; Planks on Water
+	DAT 0x7777, 0x7777, 0x7777, 0x7700 ; Bridge
+
+:display_palette
+	DAT 0x0111, 0x0333, 0x0A44, 0x05A5 ; Black, Grey,   Red,   Green
+	DAT 0x058D, 0x0CD5, 0x0952, 0x085B ; Blue,  Yellow, Brown, Purple
+	DAT 0x0FFF, 0x0FFF, 0x0FFF, 0x0FFF
+	DAT 0x0FFF, 0x0FFF, 0x0FFF, 0x0FFF
 
 :main
 	JSR detect_devices
@@ -84,6 +90,7 @@ SET PC, main
 :init_display
 	JSR init_display_screen
 	JSR init_display_font
+	JSR init_display_palette
 	SET PC, POP
 
 :init_display_screen
@@ -94,7 +101,13 @@ SET PC, main
 
 :init_display_font
 	SET A, 1
-	SET B, font
+	SET B, display_font
+	HWI [display_hwi]
+	SET PC, POP
+
+:init_display_palette
+	SET A, 2
+	SET B, display_palette
 	HWI [display_hwi]
 	SET PC, POP
 
