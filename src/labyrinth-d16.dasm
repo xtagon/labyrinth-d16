@@ -21,13 +21,13 @@ SET PC, main
 ; 0x45 - Blue Key
 ; 0x55 - Yellow Key
 ; 0x65 - Brown Key
-; 0x75 - Grey Key
+; 0x75 - Purple Key
 ; 0x26 - Red Door
 ; 0x36 - Green Door
 ; 0x46 - Blue Door
 ; 0x56 - Yellow Door
 ; 0x66 - Brown Door
-; 0x76 - Grey Door
+; 0x76 - Purple Door
 ; 0xFF - Finish
 :map_size DAT 12, 12 ; WIDTH, HEIGHT
 :map_data
