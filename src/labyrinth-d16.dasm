@@ -193,6 +193,13 @@ SUB PC, 1
 	SET PC, POP
 
 :process_player_movement
+	; Set A to the block we're moving into
+	SET X, [player_movement]
+	SET Y, [player_movement + 1]
+	JSR map_get_block
+	; If there is a stone in the way, don't move here
+	IFE A, 0x11
+		SET PC, POP
 	; Move the player
 	SET [player_position], [player_movement]
 	SET [player_position + 1], [player_movement + 1]
