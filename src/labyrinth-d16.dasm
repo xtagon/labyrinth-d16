@@ -14,6 +14,7 @@ SUB PC, 1
 :keyboard_hwi DAT 0 ; Generic Keyboard interupt address
 
 :player_position DAT 0, 0 ; X, Y
+:player_movement DAT 0, 0 ; X, Y
 
 ; 0x00 - Empty
 ; 0x11 - Stone
@@ -72,8 +73,10 @@ SUB PC, 1
 	SET PC, POP
 
 :main
+	JSR reset_player_movement
 	JSR render_map
 	JSR process_input
+	JSR process_player_movement
 	SET PC, main
 
 :detect_devices
@@ -132,6 +135,11 @@ SUB PC, 1
 :init_player
 	SET [player_position], [map_start]
 	SET [player_position + 1], [map_start + 1]
+	SET PC, POP
+
+:reset_player_movement
+	SET [player_movement], [player_position]
+	SET [player_movement + 1], [player_position + 1]
 	SET PC, POP
 
 :render_map
@@ -221,14 +229,21 @@ SUB PC, 1
 	; Set C to the next key typed
 	SET A, 1
 	HWI [keyboard_hwi]
-	; Move the player
+	; Update player movement
 	IFE C, 0x80 ; Arrow up
-		SUB [player_position + 1], 1
+		SUB [player_movement + 1], 1
 	IFE C, 0x81 ; Arrow down
-		ADD [player_position + 1], 1
+		ADD [player_movement + 1], 1
 	IFE C, 0x82 ; Arrow left
-		SUB [player_position], 1
+		SUB [player_movement], 1
 	IFE C, 0x83 ; Arrow left
-		ADD [player_position], 1
+		ADD [player_movement], 1
+	; We're done here
+	SET PC, POP
+
+:process_player_movement
+	; Move the player
+	SET [player_position], [player_movement]
+	SET [player_position + 1], [player_movement + 1]
 	; We're done here
 	SET PC, POP
