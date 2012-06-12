@@ -5,7 +5,9 @@
 ; - Inspired by Daniel Boswell's labyrnth.bas for QBasic
 ; - Implemented for DCPU-16 v1.7 specifications
 
-SET PC, main
+JSR init
+JSR main
+SUB PC, 1
 
 :display_hwi DAT 0 ; LEM1802 interupt address
 :display_buffer DAT 0x8000 ; Starting location for video RAM
@@ -59,15 +61,14 @@ SET PC, main
 	DAT 0x0FFF, 0x0FFF, 0x0FFF, 0x0FFF
 	DAT 0x0FFF, 0x0FFF, 0x0FFF, 0x0FFF
 
-:main
+:init
 	JSR detect_devices
 	JSR init_devices
-	JSR step
-	SUB PC, 2
-
-:step
-	JSR render_map
 	SET PC, POP
+
+:main
+	JSR render_map
+	SET PC, main
 
 :detect_devices
 	SET I, 0
