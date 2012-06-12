@@ -201,9 +201,13 @@ SUB PC, 1
 	IFE A, 0x11
 		SET PC, POP
 	; Move the player
+	JSR player_move
+	; We're done here
+	SET PC, POP
+
+:player_move
 	SET [player_position], [player_movement]
 	SET [player_position + 1], [player_movement + 1]
-	; We're done here
 	SET PC, POP
 
 
