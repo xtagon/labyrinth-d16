@@ -159,6 +159,26 @@ SUB PC, 1
 	SET PC, POP
 
 
+; Map Routines
+; ------------
+
+:map_get_block
+	; Set A to the block type info
+	SET A, [map_size]
+	DIV A, 2
+	MUL A, Y
+	SET B, X
+	DIV B, 2
+	ADD A, B
+	ADD A, map_data
+	SET A, [A]
+	; Parse it into the octet that we want
+	SET B, X
+	MOD B, 2
+	JSR unpack_octet_pair
+	; We're done here
+	SET PC, POP
+
 ; Player Routines
 ; ---------------
 
@@ -215,19 +235,10 @@ SUB PC, 1
 	; Draw the player
 	SET PC, render_map_block_draw
 :render_map_block_other
-	; Set A to the block type info
-	SET A, [map_size]
-	DIV A, 2
-	MUL A, I
-	SET B, J
-	DIV B, 2
-	ADD A, B
-	ADD A, map_data
-	SET A, [A]
-	; Parse it into the octet that we want
-	SET B, J
-	MOD B, 2
-	JSR unpack_octet_pair
+	; Get this block's info
+	SET X, J
+	SET Y, I
+	JSR map_get_block
 	; Set C to the block color mask
 	SET C, A
 	SHR C, 4
@@ -253,6 +264,10 @@ SUB PC, 1
 	SET [B + 1], A
 	; We're done here
 	SET PC, POP
+
+
+; Utility Routines
+; ----------------
 
 :unpack_octet_pair
 	IFE B, 1
