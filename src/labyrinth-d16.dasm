@@ -13,6 +13,8 @@ SUB PC, 1
 :display_buffer DAT 0x8000 ; Starting location for video RAM
 :keyboard_hwi DAT 0 ; Generic Keyboard interupt address
 
+:player_position DAT 0, 0 ; X, Y
+
 ; 0x00 - Empty
 ; 0x11 - Stone
 ; 0x42 - Water
@@ -32,6 +34,7 @@ SUB PC, 1
 ; 0x76 - Purple Door
 ; 0xFF - Finish
 :map_size DAT 12, 12 ; WIDTH, HEIGHT
+:map_start DAT 1, 1 ; X, Y
 :map_data
 	DAT 0x1111, 0x1111, 0x1111, 0x1111, 0x1111, 0x1111
 	DAT 0x1100, 0x1100, 0x4200, 0x1163, 0x0042, 0x4211
@@ -54,6 +57,7 @@ SUB PC, 1
 	DAT 0x7777, 0x7777, 0x7777, 0x7700 ; Bridge
 	DAT 0x0046, 0x4979, 0x0600, 0x0000 ; Key
 	DAT 0x7C7E, 0x7F7F, 0x7F6E, 0x7C00 ; Door
+	DAT 0x0808, 0x1C7F, 0x1C08, 0x0800 ; Player
 
 :display_palette
 	DAT 0x0111, 0x0333, 0x0A44, 0x05A5 ; Black, Grey,   Red,   Green
@@ -64,6 +68,7 @@ SUB PC, 1
 :init
 	JSR detect_devices
 	JSR init_devices
+	JSR init_player
 	SET PC, POP
 
 :main
@@ -123,6 +128,11 @@ SUB PC, 1
 	HWI [keyboard_hwi]
 	SET PC, POP
 
+:init_player
+	SET [player_position], [map_start]
+	SET [player_position + 1], [map_start + 1]
+	SET PC, POP
+
 :render_map
 	SET I, 0
 :render_map_next
@@ -142,6 +152,19 @@ SUB PC, 1
 	SET PC, POP
 
 :render_map_block
+	SET A, 0
+	IFE J, [player_position]
+	IFE I, [player_position + 1]
+		SET PC, render_map_block_player
+	SET PC, render_map_block_other
+:render_map_block_player
+	; Set C to the player's color mask
+	SET C, 0xF000
+	; Set A to the font location for the player
+	SET A, 0x000E
+	; Draw the player
+	SET PC, render_map_block_draw
+:render_map_block_other
 	; Set A to the block type info
 	SET A, [map_size]
 	DIV A, 2
@@ -162,6 +185,7 @@ SUB PC, 1
 	; Set A to the font location for this block
 	AND A, 0x000F
 	MUL A, 2
+:render_map_block_draw
 	; Set B to the video RAM address we wish to set
 	SET PUSH, C
 	SET B, 32
