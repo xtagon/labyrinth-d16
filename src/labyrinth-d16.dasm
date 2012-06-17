@@ -174,8 +174,7 @@ SUB PC, 1
 	SET A, [A]
 	; Parse it into the octet that we want
 	SET B, X
-	MOD B, 2
-	JSR unpack_octet_pair
+	JSR get_octet
 	; We're done here
 	SET PC, POP
 
@@ -280,16 +279,16 @@ SUB PC, 1
 ; Utility Routines
 ; ----------------
 
-:unpack_octet_pair
+:get_octet
+	MOD B, 2
 	IFE B, 1
-		SET PC, unpack_octet_pair_right
-	SET PC, unpack_octet_pair_left
-:unpack_octet_pair_right
-	AND A, 0x00FF
-	SET PC, POP
-:unpack_octet_pair_left
+		SET PC, get_octet_right
+:get_octet_left
 	AND A, 0xFF00
 	SHR A, 8
+	SET PC, POP
+:get_octet_right
+	AND A, 0x00FF
 	SET PC, POP
 
 
