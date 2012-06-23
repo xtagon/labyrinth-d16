@@ -192,6 +192,38 @@ SUB PC, 1
 	; We're done here
 	SET PC, POP
 
+; X --> X position on the map
+; Y --> Y position on the map
+; Z --> block info (e.g. 0x63 for planks)
+:map_set_block
+	; Preserve registers
+	SET PUSH, A
+	SET PUSH, B
+	SET PUSH, C
+	SET PUSH, I
+	; Set I to the map memory location
+	SET I, [map_size]
+	DIV I, 2
+	MUL I, Y
+	SET B, X
+	DIV B, 2
+	ADD I, B
+	ADD I, map_data
+	; Set A to the block info at this location
+	SET A, [I]
+	; Update the value
+	SET B, X
+	SET C, Z
+	JSR set_octet
+	SET [I], A
+	; Restore registers
+	SET I, POP
+	SET C, POP
+	SET B, POP
+	SET A, POP
+	; We're done here
+	SET PC, POP
+
 
 ; Player Routines
 ; ---------------
@@ -225,10 +257,18 @@ SUB PC, 1
 	SET PC, POP
 
 :player_swap_inventory
+	; Set A to the inventory item
+	SET A, [player_inventory]
+	; Set Z to the item under the player
 	SET X, [player_position]
 	SET Y, [player_position + 1]
 	JSR map_get_block
+	; Pick up the item on the ground
 	SET [player_inventory], Z
+	; Drop the item we were holding
+	SET Z, A
+	JSR map_set_block
+	; We're done here
 	SET PC, POP
 
 ; Rendering
@@ -322,6 +362,20 @@ SUB PC, 1
 	SET PC, POP
 :get_octet_right
 	AND A, 0x00FF
+	SET PC, POP
+
+:set_octet
+	MOD B, 2
+	IFE B, 1
+		SET PC, set_octet_right
+:set_octet_left
+	AND A, 0x00FF
+	SHL C, 8
+	BOR A, C
+	SET PC, POP
+:set_octet_right
+	AND A, 0xFF00
+	BOR A, C
 	SET PC, POP
 
 
