@@ -16,6 +16,7 @@ SUB PC, 1
 
 :player_position DAT 0, 0 ; X, Y
 :player_movement DAT 0, 0 ; X, Y
+:player_inventory DAT 0x63
 
 
 ; Hardware Variables
@@ -97,6 +98,7 @@ SUB PC, 1
 :main
 	JSR reset_player_movement
 	JSR render_map
+	JSR render_inventory
 	JSR process_input
 	JSR process_player_movement
 	SET PC, main
@@ -276,6 +278,33 @@ SUB PC, 1
 	; We're done here
 	SET PC, POP
 
+:render_inventory
+	; Set A to the inventory item's info
+	SET A, [player_inventory]
+	; Set C to the item's color mask
+	SET C, A
+	SHR C, 4
+	SHL C, 12
+	; Set A to the font location for this item
+	AND A, 0x000F
+	MUL A, 2
+	; Set B to the video RAM address we wish to set
+	SET PUSH, C
+	SET B, 32
+	MUL B, 0; Y
+	SET C, 13; X
+	MUL C, 2
+	ADD B, C
+	ADD B, [display_buffer]
+	SET C, POP
+	; Draw the left side of the block
+	BOR A, C
+	SET [B], A
+	; Draw the right side of the block
+	ADD A, 1
+	SET [B + 1], A
+	; We're done here
+	SET PC, POP
 
 ; Utility Routines
 ; ----------------
