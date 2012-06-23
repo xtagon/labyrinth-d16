@@ -16,7 +16,7 @@ SUB PC, 1
 
 :player_position DAT 0, 0 ; X, Y
 :player_movement DAT 0, 0 ; X, Y
-:player_inventory DAT 0x63
+:player_inventory DAT 0x00
 
 
 ; Hardware Variables
@@ -224,6 +224,12 @@ SUB PC, 1
 	SET [player_position + 1], [player_movement + 1]
 	SET PC, POP
 
+:player_swap_inventory
+	SET X, [player_position]
+	SET Y, [player_position + 1]
+	JSR map_get_block
+	SET [player_inventory], Z
+	SET PC, POP
 
 ; Rendering
 ; ---------
@@ -335,5 +341,8 @@ SUB PC, 1
 		SUB [player_movement], 1
 	IFE C, 0x83 ; Arrow left
 		ADD [player_movement], 1
+	; Inventory
+	IFE C, 0x20 ; Space
+		JSR player_swap_inventory
 	; We're done here
 	SET PC, POP
