@@ -164,7 +164,14 @@ SUB PC, 1
 ; Map Routines
 ; ------------
 
+; X --> X position on the map
+; Y --> Y position on the map
+;
+; Z <-- block info (e.g. 0x63 for planks)
 :map_get_block
+	; Preserve registers
+	SET PUSH, A
+	SET PUSH, B
 	; Set A to the block type info
 	SET A, [map_size]
 	DIV A, 2
@@ -177,6 +184,11 @@ SUB PC, 1
 	; Parse it into the octet that we want
 	SET B, X
 	JSR get_octet
+	; Set Z to the result
+	SET Z, A
+	; Restore registers
+	SET B, POP
+	SET A, POP
 	; We're done here
 	SET PC, POP
 
@@ -195,12 +207,12 @@ SUB PC, 1
 	SET PC, POP
 
 :process_player_movement
-	; Set A to the block we're moving into
+	; Set Z to the block we're moving into
 	SET X, [player_movement]
 	SET Y, [player_movement + 1]
 	JSR map_get_block
 	; If there is a stone in the way, don't move here
-	IFE A, 0x11
+	IFE Z, 0x11
 		SET PC, POP
 	; Move the player
 	JSR player_move
@@ -244,7 +256,7 @@ SUB PC, 1
 	; Set C to the player's color mask
 	SET C, 0xF000
 	; Set A to the font location for the player
-	SET A, 0x000E
+	SET Z, 0x000E
 	; Draw the player
 	SET PC, render_map_block_draw
 :render_map_block_other
@@ -253,12 +265,12 @@ SUB PC, 1
 	SET Y, I
 	JSR map_get_block
 	; Set C to the block color mask
-	SET C, A
+	SET C, Z
 	SHR C, 4
 	SHL C, 12
-	; Set A to the font location for this block
-	AND A, 0x000F
-	MUL A, 2
+	; Set Z to the font location for this block
+	AND Z, 0x000F
+	MUL Z, 2
 :render_map_block_draw
 	; Set B to the video RAM address we wish to set
 	SET PUSH, C
@@ -270,11 +282,11 @@ SUB PC, 1
 	ADD B, [display_buffer]
 	SET C, POP
 	; Draw the left side of the block
-	BOR A, C
-	SET [B], A
+	BOR Z, C
+	SET [B], Z
 	; Draw the right side of the block
-	ADD A, 1
-	SET [B + 1], A
+	ADD Z, 1
+	SET [B + 1], Z
 	; We're done here
 	SET PC, POP
 
