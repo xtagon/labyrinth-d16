@@ -247,47 +247,19 @@ SUB PC, 1
 	SET PC, POP
 
 :render_map_block
-	SET A, 0
+	SET X, J
+	SET Y, I
 	IFE J, [player_position]
 	IFE I, [player_position + 1]
 		SET PC, render_map_block_player
 	SET PC, render_map_block_other
 :render_map_block_player
-	; Set C to the player's color mask
-	SET C, 0xF000
-	; Set A to the font location for the player
-	SET Z, 0x000E
-	; Draw the player
+	SET Z, 0xF7
 	SET PC, render_map_block_draw
 :render_map_block_other
-	; Get this block's info
-	SET X, J
-	SET Y, I
 	JSR map_get_block
-	; Set C to the block color mask
-	SET C, Z
-	SHR C, 4
-	SHL C, 12
-	; Set Z to the font location for this block
-	AND Z, 0x000F
-	MUL Z, 2
 :render_map_block_draw
-	; Set B to the video RAM address we wish to set
-	SET PUSH, C
-	SET B, 32
-	MUL B, I
-	SET C, J
-	MUL C, 2
-	ADD B, C
-	ADD B, [display_buffer]
-	SET C, POP
-	; Draw the left side of the block
-	BOR Z, C
-	SET [B], Z
-	; Draw the right side of the block
-	ADD Z, 1
-	SET [B + 1], Z
-	; We're done here
+	JSR render_block
 	SET PC, POP
 
 :render_inventory
