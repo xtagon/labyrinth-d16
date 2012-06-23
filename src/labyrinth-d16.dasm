@@ -279,32 +279,47 @@ SUB PC, 1
 	SET PC, POP
 
 :render_inventory
-	; Set A to the inventory item's info
-	SET A, [player_inventory]
-	; Set C to the item's color mask
-	SET C, A
+	SET X, 13
+	SET Y, 0
+	SET Z, [player_inventory]
+	JSR render_block
+	SET PC, POP
+
+; Y --> Y position (0..11)
+; X --> X position (0..15)
+; Z --> block info (e.g. 0x63 for planks)
+:render_block
+	; Preserve registers
+	SET PUSH, A
+	SET PUSH, B
+	SET PUSH, C
+	; Set C to the block's color mask
+	SET C, Z
 	SHR C, 4
 	SHL C, 12
-	; Set A to the font location for this item
-	AND A, 0x000F
-	MUL A, 2
+	; Set Z to the font location for this block
+	AND Z, 0x000F
+	MUL Z, 2
 	; Set B to the video RAM address we wish to set
-	SET PUSH, C
 	SET B, 32
-	MUL B, 0; Y
-	SET C, 13; X
-	MUL C, 2
-	ADD B, C
+	MUL B, Y
+	SET A, X
+	MUL A, 2
+	ADD B, A
 	ADD B, [display_buffer]
-	SET C, POP
 	; Draw the left side of the block
-	BOR A, C
-	SET [B], A
+	BOR Z, C
+	SET [B], Z
 	; Draw the right side of the block
-	ADD A, 1
-	SET [B + 1], A
+	ADD Z, 1
+	SET [B + 1], Z
+	; Restore registers
+	SET C, POP
+	SET B, POP
+	SET A, POP
 	; We're done here
 	SET PC, POP
+
 
 ; Utility Routines
 ; ----------------
