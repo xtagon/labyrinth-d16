@@ -229,28 +229,26 @@ SUB PC, 1
 ; ---------
 
 :render_map
-	SET I, 0
+	SET Y, 0
 :render_map_next
 	JSR render_map_row
-	ADD I, 1
-	IFG [map_size + 1], I
+	ADD Y, 1
+	IFG [map_size + 1], Y
 		SET PC, render_map_next
 	SET PC, POP
 
 :render_map_row
-	SET J, 0
+	SET X, 0
 :render_map_row_next
 	JSR render_map_block
-	ADD J, 1
-	IFG [map_size], J
+	ADD X, 1
+	IFG [map_size], X
 		SET PC, render_map_row_next
 	SET PC, POP
 
 :render_map_block
-	SET X, J
-	SET Y, I
-	IFE J, [player_position]
-	IFE I, [player_position + 1]
+	IFE X, [player_position]
+	IFE Y, [player_position + 1]
 		SET PC, render_map_block_player
 	SET PC, render_map_block_other
 :render_map_block_player
