@@ -246,6 +246,22 @@ SUB PC, 1
 	; If there is a stone in the way, don't move here
 	IFE Z, 0x11
 		SET PC, POP
+	; If there is water in the way, handle it
+	IFE Z, 0x42
+		SET PC, process_player_movement_water
+	; Move the player
+	JSR player_move
+	; We're done here
+	SET PC, POP
+:process_player_movement_water
+	; Cancel the movemnt unless we're carrying planks
+	IFN [player_inventory], 0x63
+		SET PC, POP
+	; Place a bridge on the water
+	SET Z, 0x64
+	JSR map_set_block
+	; Clear the inventory (since we used the planks)
+	SET [player_inventory], 0x00
 	; Move the player
 	JSR player_move
 	; We're done here
@@ -263,6 +279,9 @@ SUB PC, 1
 	SET X, [player_position]
 	SET Y, [player_position + 1]
 	JSR map_get_block
+	; Cancel the swap if we're on a bridge
+	IFE Z, 0x64
+		SET PC, POP
 	; Pick up the item on the ground
 	SET [player_inventory], Z
 	; Drop the item we were holding
@@ -270,6 +289,7 @@ SUB PC, 1
 	JSR map_set_block
 	; We're done here
 	SET PC, POP
+
 
 ; Rendering
 ; ---------
