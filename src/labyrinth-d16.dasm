@@ -239,6 +239,10 @@ SUB PC, 1
 	SET PC, POP
 
 :process_player_movement
+	; Only continue if there is movement
+	IFE [player_position], [player_movement]
+	IFE [player_position + 1], [player_movement + 1]
+		SET PC, POP
 	; Set Z to the block we're moving into
 	SET X, [player_movement]
 	SET Y, [player_movement + 1]
