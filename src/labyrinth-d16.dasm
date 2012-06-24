@@ -243,12 +243,18 @@ SUB PC, 1
 	SET X, [player_movement]
 	SET Y, [player_movement + 1]
 	JSR map_get_block
+	; Set A to the block type
+	SET A, Z
+	AND A, 0x0F
 	; If there is a stone in the way, don't move here
-	IFE Z, 0x11
+	IFE A, 0x01
 		SET PC, POP
 	; If there is water in the way, handle it
-	IFE Z, 0x42
+	IFE A, 0x02
 		SET PC, process_player_movement_water
+	; If there is a door in the way, handle it
+	IFE A, 0x06
+		SET PC, process_player_movement_door
 	; Move the player
 	JSR player_move
 	; We're done here
@@ -261,6 +267,33 @@ SUB PC, 1
 	SET Z, 0x64
 	JSR map_set_block
 	; Clear the inventory (since we used the planks)
+	SET [player_inventory], 0x00
+	; Move the player
+	JSR player_move
+	; We're done here
+	SET PC, POP
+:process_player_movement_door
+	; Set I to the type of item we're carrying
+	SET I, [player_inventory]
+	AND I, 0x0F
+	; Cancel the movement unless we have a key
+	IFN I, 0x05
+		SET PC, POP
+	; Set J to the color of our key
+	SET J, [player_inventory]
+	AND J, 0xF0
+	SHR J, 4
+	; Set B to the color of the door
+	SET B, Z
+	AND B, 0xF0
+	SHR B, 4
+	; Cancel the movement if the colors don't match
+	IFN J, B
+		SET PC, POP
+	; Unlock the door (get rid of it)
+	SET Z, 0x00
+	JSR map_set_block
+	; Clear the inventory (since we used the key)
 	SET [player_inventory], 0x00
 	; Move the player
 	JSR player_move
