@@ -1,8 +1,459 @@
 ; Labyrinth for DCPU-16
 ; =====================
-
-; - Copyright 2012 Justin Workman <xtagon@gmail.com>
+;
+; - Copyright 2013 Justin Workman <xtagon@gmail.com>
 ; - Inspired by Daniel Boswell's labyrnth.bas for QBasic
 ; - Implemented for DCPU-16 v1.7 specifications
 
+
+JSR init
+JSR main
 SUB PC, 1
+
+
+; Player Variables
+; ----------------
+
+:player_position DAT 0, 0 ; X, Y
+:player_movement DAT 0, 0 ; X, Y
+:player_inventory DAT 0x00
+
+
+; Hardware Variables
+; ----------------
+
+:display_hwi DAT 0 ; LEM1802 interupt address
+:display_buffer DAT 0x8000 ; Starting location for video RAM
+:keyboard_hwi DAT 0 ; Generic Keyboard interupt address
+
+
+; Map Data
+; --------
+;
+; 0x00 - Empty
+; 0x11 - Stone
+; 0x42 - Water
+; 0x63 - Planks
+; 0x64 - Bridge
+; 0x25 - Red Key
+; 0x35 - Green Key
+; 0x45 - Blue Key
+; 0x55 - Yellow Key
+; 0x65 - Brown Key
+; 0x75 - Purple Key
+; 0x26 - Red Door
+; 0x36 - Green Door
+; 0x46 - Blue Door
+; 0x56 - Yellow Door
+; 0x66 - Brown Door
+; 0x76 - Purple Door
+; 0xFF - Finish
+
+:map_size DAT 12, 12 ; WIDTH, HEIGHT
+:map_start DAT 1, 1 ; X, Y
+:map_data
+	DAT 0x1111, 0x1111, 0x1111, 0x1111, 0x1111, 0x1111
+	DAT 0x1100, 0x1100, 0x4200, 0x1163, 0x0042, 0x4211
+	DAT 0x1100, 0x1100, 0x1100, 0x1100, 0x1111, 0x0011
+	DAT 0x1100, 0x0075, 0x1100, 0x0000, 0x1135, 0x0011
+	DAT 0x1111, 0x1100, 0x1146, 0x1100, 0x1111, 0x1111
+	DAT 0x1163, 0x0000, 0x1100, 0x1100, 0x0000, 0x1111
+	DAT 0x1111, 0x1111, 0x1163, 0x3600, 0x1111, 0x1111
+	DAT 0x1111, 0x0042, 0x0000, 0x1100, 0x0000, 0x4511
+	DAT 0x1111, 0x0011, 0x0000, 0x0063, 0x1111, 0x1111
+	DAT 0x1111, 0x0011, 0x1111, 0x1111, 0x1111, 0x1111
+	DAT 0x1163, 0x0076, 0x0042, 0x0000, 0x0000, 0xFF11
+	DAT 0x1111, 0x1111, 0x1111, 0x1111, 0x1111, 0x1111
+
+
+; Font (Sprite Table) and Color Palette
+; -------------------------------------
+
+:display_font
+	DAT 0x0000, 0x0000, 0x0000, 0x0000 ; Empty
+	DAT 0x3E7F, 0x7F7F, 0x7F7F, 0x3E00 ; Stone
+	DAT 0x9259, 0x4536, 0x9259, 0x4436 ; Water
+	DAT 0x4C6C, 0x6636, 0x331B, 0x1900 ; Planks
+	DAT 0x7777, 0x7777, 0x7777, 0x7700 ; Bridge
+	DAT 0x0046, 0x4979, 0x0600, 0x0000 ; Key
+	DAT 0x7C7E, 0x7F7F, 0x7F6E, 0x7C00 ; Door
+	DAT 0x0808, 0x1C7F, 0x1C08, 0x0800 ; Player
+
+:display_palette
+	DAT 0x0111, 0x0333, 0x0A44, 0x05A5 ; Black, Grey,   Red,   Green
+	DAT 0x058D, 0x0CD5, 0x0952, 0x085B ; Blue,  Yellow, Brown, Purple
+	DAT 0x0FFF, 0x0FFF, 0x0FFF, 0x0FFF
+	DAT 0x0FFF, 0x0FFF, 0x0FFF, 0x0FFF
+
+
+; Main Routines
+; -------------
+
+:init
+	JSR detect_devices
+	JSR init_devices
+	JSR init_player
+	SET PC, POP
+
+:main
+	JSR reset_player_movement
+	JSR render_map
+	JSR render_inventory
+	JSR process_input
+	JSR process_player_movement
+	SET PC, main
+
+
+; Hardware Routines
+; -----------------
+
+:detect_devices
+	SET I, 0
+	HWN J
+:next_device
+	HWQ I
+	; Check for the LEM1802 display (0x7349F615)
+	IFE A, 0xF615
+	IFE B, 0x7349
+		SET [display_hwi], I
+	; Check for Generic Keyboard (0x30CF7406)
+	IFE A, 0x7406
+	IFE B, 0x30CF
+		SET [keyboard_hwi], I
+	; Keep 'em comin'
+	ADD I, 1
+	IFN I, J
+		SET PC, next_device
+	SET PC, POP
+
+:init_devices
+	JSR init_display
+	JSR init_keyboard
+	SET PC, POP
+
+:init_display
+	JSR init_display_screen
+	JSR init_display_font
+	JSR init_display_palette
+	SET PC, POP
+
+:init_display_screen
+	SET A, 0
+	SET B, [display_buffer]
+	HWI [display_hwi]
+	SET PC, POP
+
+:init_display_font
+	SET A, 1
+	SET B, display_font
+	HWI [display_hwi]
+	SET PC, POP
+
+:init_display_palette
+	SET A, 2
+	SET B, display_palette
+	HWI [display_hwi]
+	SET PC, POP
+
+:init_keyboard
+	SET A, 0
+	HWI [keyboard_hwi]
+	SET PC, POP
+
+
+; Map Routines
+; ------------
+
+; X --> X position on the map
+; Y --> Y position on the map
+;
+; Z <-- block info (e.g. 0x63 for planks)
+:map_get_block
+	; Preserve registers
+	SET PUSH, A
+	SET PUSH, B
+	; Set A to the block type info
+	SET A, [map_size]
+	DIV A, 2
+	MUL A, Y
+	SET B, X
+	DIV B, 2
+	ADD A, B
+	ADD A, map_data
+	SET A, [A]
+	; Parse it into the octet that we want
+	SET B, X
+	JSR get_octet
+	; Set Z to the result
+	SET Z, A
+	; Restore registers
+	SET B, POP
+	SET A, POP
+	; We're done here
+	SET PC, POP
+
+; X --> X position on the map
+; Y --> Y position on the map
+; Z --> block info (e.g. 0x63 for planks)
+:map_set_block
+	; Preserve registers
+	SET PUSH, A
+	SET PUSH, B
+	SET PUSH, C
+	SET PUSH, I
+	; Set I to the map memory location
+	SET I, [map_size]
+	DIV I, 2
+	MUL I, Y
+	SET B, X
+	DIV B, 2
+	ADD I, B
+	ADD I, map_data
+	; Set A to the block info at this location
+	SET A, [I]
+	; Update the value
+	SET B, X
+	SET C, Z
+	JSR set_octet
+	SET [I], A
+	; Restore registers
+	SET I, POP
+	SET C, POP
+	SET B, POP
+	SET A, POP
+	; We're done here
+	SET PC, POP
+
+
+; Player Routines
+; ---------------
+
+:init_player
+	SET [player_position], [map_start]
+	SET [player_position + 1], [map_start + 1]
+	SET PC, POP
+
+:reset_player_movement
+	SET [player_movement], [player_position]
+	SET [player_movement + 1], [player_position + 1]
+	SET PC, POP
+
+:process_player_movement
+	; Only continue if there is movement
+	IFE [player_position], [player_movement]
+	IFE [player_position + 1], [player_movement + 1]
+		SET PC, POP
+	; Set Z to the block we're moving into
+	SET X, [player_movement]
+	SET Y, [player_movement + 1]
+	JSR map_get_block
+	; Set A to the block type
+	SET A, Z
+	AND A, 0x0F
+	; If there is a stone in the way, don't move here
+	IFE A, 0x01
+		SET PC, POP
+	; If there is water in the way, handle it
+	IFE A, 0x02
+		SET PC, process_player_movement_water
+	; If there is a door in the way, handle it
+	IFE A, 0x06
+		SET PC, process_player_movement_door
+	; Move the player
+	JSR player_move
+	; We're done here
+	SET PC, POP
+:process_player_movement_water
+	; Cancel the movemnt unless we're carrying planks
+	IFN [player_inventory], 0x63
+		SET PC, POP
+	; Place a bridge on the water
+	SET Z, 0x64
+	JSR map_set_block
+	; Clear the inventory (since we used the planks)
+	SET [player_inventory], 0x00
+	; Move the player
+	JSR player_move
+	; We're done here
+	SET PC, POP
+:process_player_movement_door
+	; Set I to the type of item we're carrying
+	SET I, [player_inventory]
+	AND I, 0x0F
+	; Cancel the movement unless we have a key
+	IFN I, 0x05
+		SET PC, POP
+	; Set J to the color of our key
+	SET J, [player_inventory]
+	AND J, 0xF0
+	SHR J, 4
+	; Set B to the color of the door
+	SET B, Z
+	AND B, 0xF0
+	SHR B, 4
+	; Cancel the movement if the colors don't match
+	IFN J, B
+		SET PC, POP
+	; Unlock the door (get rid of it)
+	SET Z, 0x00
+	JSR map_set_block
+	; Clear the inventory (since we used the key)
+	SET [player_inventory], 0x00
+	; Move the player
+	JSR player_move
+	; We're done here
+	SET PC, POP
+
+:player_move
+	SET [player_position], [player_movement]
+	SET [player_position + 1], [player_movement + 1]
+	SET PC, POP
+
+:player_swap_inventory
+	; Set A to the inventory item
+	SET A, [player_inventory]
+	; Set Z to the item under the player
+	SET X, [player_position]
+	SET Y, [player_position + 1]
+	JSR map_get_block
+	; Cancel the swap if we're on a bridge
+	IFE Z, 0x64
+		SET PC, POP
+	; Pick up the item on the ground
+	SET [player_inventory], Z
+	; Drop the item we were holding
+	SET Z, A
+	JSR map_set_block
+	; We're done here
+	SET PC, POP
+
+
+; Rendering
+; ---------
+
+:render_map
+	SET Y, 0
+:render_map_next
+	JSR render_map_row
+	ADD Y, 1
+	IFG [map_size + 1], Y
+		SET PC, render_map_next
+	SET PC, POP
+
+:render_map_row
+	SET X, 0
+:render_map_row_next
+	JSR render_map_block
+	ADD X, 1
+	IFG [map_size], X
+		SET PC, render_map_row_next
+	SET PC, POP
+
+:render_map_block
+	IFE X, [player_position]
+	IFE Y, [player_position + 1]
+		SET PC, render_map_block_player
+	SET PC, render_map_block_other
+:render_map_block_player
+	SET Z, 0xF7
+	SET PC, render_map_block_draw
+:render_map_block_other
+	JSR map_get_block
+:render_map_block_draw
+	JSR render_block
+	SET PC, POP
+
+:render_inventory
+	SET X, 13
+	SET Y, 0
+	SET Z, [player_inventory]
+	JSR render_block
+	SET PC, POP
+
+; Y --> Y position (0..11)
+; X --> X position (0..15)
+; Z --> block info (e.g. 0x63 for planks)
+:render_block
+	; Preserve registers
+	SET PUSH, A
+	SET PUSH, B
+	SET PUSH, C
+	; Set C to the block's color mask
+	SET C, Z
+	SHR C, 4
+	SHL C, 12
+	; Set Z to the font location for this block
+	AND Z, 0x000F
+	MUL Z, 2
+	; Set B to the video RAM address we wish to set
+	SET B, 32
+	MUL B, Y
+	SET A, X
+	MUL A, 2
+	ADD B, A
+	ADD B, [display_buffer]
+	; Draw the left side of the block
+	BOR Z, C
+	SET [B], Z
+	; Draw the right side of the block
+	ADD Z, 1
+	SET [B + 1], Z
+	; Restore registers
+	SET C, POP
+	SET B, POP
+	SET A, POP
+	; We're done here
+	SET PC, POP
+
+
+; Utility Routines
+; ----------------
+
+:get_octet
+	MOD B, 2
+	IFE B, 1
+		SET PC, get_octet_right
+:get_octet_left
+	AND A, 0xFF00
+	SHR A, 8
+	SET PC, POP
+:get_octet_right
+	AND A, 0x00FF
+	SET PC, POP
+
+:set_octet
+	MOD B, 2
+	IFE B, 1
+		SET PC, set_octet_right
+:set_octet_left
+	AND A, 0x00FF
+	SHL C, 8
+	BOR A, C
+	SET PC, POP
+:set_octet_right
+	AND A, 0xFF00
+	BOR A, C
+	SET PC, POP
+
+
+; Input Handling
+; --------------
+
+:process_input
+	; Set C to the next key typed
+	SET A, 1
+	HWI [keyboard_hwi]
+	; Update player movement
+	IFE C, 0x80 ; Arrow up
+		SUB [player_movement + 1], 1
+	IFE C, 0x81 ; Arrow down
+		ADD [player_movement + 1], 1
+	IFE C, 0x82 ; Arrow left
+		SUB [player_movement], 1
+	IFE C, 0x83 ; Arrow left
+		ADD [player_movement], 1
+	; Inventory
+	IFE C, 0x20 ; Space
+		JSR player_swap_inventory
+	; We're done here
+	SET PC, POP
